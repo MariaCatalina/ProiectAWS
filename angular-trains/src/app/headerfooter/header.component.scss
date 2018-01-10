@@ -1,0 +1,42 @@
+#header-div {
+    bottom: 0px;
+    height: 30px;
+    left: 0px;
+    background: rgb(29, 29, 29) none repeat scroll 0% 0% / auto padding-box border-box;
+    right: 0px;
+    top: 0px;
+    perspective-origin: 472.5px 15px;
+    transform-origin: 472.5px 15px;
+    background: rgb(29, 29, 29) none repeat scroll 0% 0% / auto padding-box border-box;
+    font-size: 12px;
+    overflow: hidden;
+}
+
+.train-logo {
+    width: 100px;
+    height: 30px;
+}
+
+.logo {
+    padding-top:4px;
+    padding-left: 5px;
+    float: left;
+    cursor: pointer;
+}
+
+.logo:hover {
+    background-color: #343434;
+}
+
+.title {
+    padding-top: 8px;
+    color: white;
+    width: 320px;
+    height: 300px;
+    align-self: center;
+}
+
+.appTitle {
+    align-content: center;
+    font-size: 18px;
+}
