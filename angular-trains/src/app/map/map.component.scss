@@ -1,25 +1,40 @@
+#container {
+  width: 100px;
+  height: 100px;
+  //position: relative;
+}
+
 body {
     margin: 0;
     padding: 0;
 }
-.map {
-    width: 100%;
-    height: 100vh;
-}
+
 .input {
     position: absolute;
         top: 30px;
         left: 30px;
- 
+
     border: 1px solid silver;
         border-radius: 15px;
- 
+
     font-family: Roboto;
         font-size: 15px;
         font-weight: lighter;
         text-align: center;
- 
+
     padding: 10px;
     z-index: 100;
     width: 250px;
 }
+
+#map {
+  height: 100%;
+}
+
+agm-map {
+  position: relative;
+  top: 0;
+  left: 0;
+  height: 790px;
+}
+

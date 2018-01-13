@@ -1,0 +1,9 @@
+<div class="search-filter" id="search-filer">
+  <form class="form-input" id="form-input">
+      <input type="text" class="form-control" id="source" required [(ngModel)]="source" name="source">
+      <input type="text" class="form-control" id="destination" required [(ngModel)]="destination" name="destination">
+
+    <button class="searchBtn" id="searchBtn" type="submit" (click)="searchBtnFunc()">Search</button>
+    <button class="clearBtn" id="clearBtn" type="submit" (click)="clearBtnFunc()">Clear</button>
+  </form>
+</div>

@@ -1,68 +1,281 @@
-import { Component,  ViewChild, ElementRef, OnInit } from "@angular/core";
-import {GoogleMapsService} from 'google-maps-angular2';
+import {Component, OnInit, ChangeDetectorRef} from "@angular/core";
+import {MouseEvent, GoogleMapsAPIWrapper} from "@agm/core";
+import {StationsService} from "./stations.service";
+import {Response} from "@angular/http";
+import {Station} from "./Station";
+import {MessageService} from "../message.service";
+import {Subscription} from "rxjs";
+import {isUndefined, isNullOrUndefined} from "util";
+declare var google: any;
 
 @Component({
-    selector: "google-map",
-    templateUrl: './map.component.html',
-    styleUrls: ['./map.component.scss'],
+  selector: "google-map",
+  templateUrl: './map.component.html',
+  styleUrls: ['./map.component.scss'],
 })
 export class TrainsGoogleMap implements OnInit {
 
-    @ViewChild('mapElement') mapElement: ElementRef;
-    @ViewChild('inputElement') inputElement: ElementRef;
- 
-    private map: any;
+  // google maps zoom level
+  zoom: number = 7;
 
-    constructor(private gapi: GoogleMapsService
-    ) {
+  // initial center position for the map
+  lat: number = 46.0008141;
+  lng: number = 24.2705566;
+
+  markers: marker[] = new Array();
+
+  lines = new Array();
+  //   lat: 44.96518,
+  //   lng: 25.970816
+  //
+  // },
+  //   {
+  //     lat: 44.4458851,
+  //     lng: 26.0727263
+  //   } ,
+  //   {
+  //     lat: 44.6458851,
+  //     lng: 26.0727263
+  //
+  //   }];
+
+  clickedMarker(label: string, index: number) {
+    console.log(`clicked the marker: ${label || index}`)
+  }
+
+  mapClicked($event: MouseEvent) {
+    // this.markers.push({
+    //   lat: $event.coords.lat,
+    //   lng: $event.coords.lng,
+    //   draggable: true
+    // });
+  }
+
+  message: string;
+  subscription: Subscription;
+
+  constructor(private stationsService: StationsService, private cdRef: ChangeDetectorRef, private messageService: MessageService, private gmapsApi: GoogleMapsAPIWrapper) {
+    this.subscription = this.messageService.getMessage().subscribe(message => {
+      this.message = message;
+      console.log("message: " + message.text);
+
+      if (message.text === "clear") {
+        this.markers = [];
+      } else {
+
+        let search = message.text.split(":");
+        if (search[0] === 'anything' && search[1] === 'anything') {
+          this.getAllStations();
+        } else {
+          this.findStations(search[0], search[1]);
+        }
+      }
+
+    })
+
+  }
+
+  ngOnInit() {
+
+  }
+
+
+  findStations(source: string, destintion: string) {
+    this.stationsService.findSourceDestination(source, destintion).subscribe((data: Response) => {
+      console.log("am gasit sursa: + " + data.results.bindings);
+      if (!isUndefined(data)) {
+        debugger;
+        let sourceURI = "";
+        let destURI = "";
+        console.log("source: " + sourceURI);
+
+        let foundS: boolean = false;
+        let foundD: boolean = false;
+        for (let entry of data.results.bindings) {
+          let uri = entry['sub']['value'].split("_")[1];
+          let value: string = entry['object']['value'];
+          if (value.indexOf(source) !== -1 && !foundS) {
+            sourceURI = uri;
+            foundS = true;
+          }
+
+          if (value.indexOf(destintion) !== -1 && !foundD) {
+            destURI = uri;
+            foundD = true;
+          }
+        }
+
+        console.log("s: " + sourceURI , "D: " + destURI);
+
+        this.stationsService.findTrain(sourceURI, destURI).subscribe(train => {
+          for (let entry of train.results.bindings) {
+            let uri: string = entry['sub']['value'];
+            let stations: string = entry['obj']['value'];
+
+            let indexS = stations.indexOf(sourceURI);
+            let indexD = stations.indexOf(destURI);
+            if (indexD > indexS) {
+              console.log("AM GASIT TREN......" + uri);
+              console.log("statii: " + stations);
+              this.showTrainRoute(stations, sourceURI, destURI);
+            }
+          }
+        })
+
+      }
+    });
+  }
+
+
+  showTrainRoute(listStations: string, source: string, dest: string) {
+
+    let stationsString: string = (listStations.split("[")[1]).split("]")[0];
+    let stations: string [] = stationsString.substring(stationsString.indexOf(source)).split(",");
+
+    console.log("-> " + stations);
+    let index = 0;
+    for (let entry of stations) {
+      this.stationsService.findOneStation(entry.trim()).subscribe(data => {
+        if (!isNullOrUndefined(data)) {
+          let oldS: Station = new Station();
+          let resultL = data.results.bindings;
+          for (let entry of resultL) {
+            let val: string = entry['prop']['value'];
+            if (val.indexOf("LAT") !== -1) {
+              oldS.lat = entry['obj']['value'];
+            }
+            else if (val.indexOf("LON") !== -1) {
+              oldS.long = entry['obj']['value'];
+            } else if (val.indexOf('Country') !== -1) {
+              oldS.fullName = entry['obj']['value'];
+            }
+          }
+          this.markers.push({
+            lat: parseFloat(oldS.lat),
+            lng: parseFloat(oldS.long),
+            // label: entry.fullName,
+            draggable: false
+          });
+        }
+      });
     }
+  }
 
-    ngOnInit() {
-    }
+  getAllStations() {
+    this.stationsService.getAllStations().subscribe((data: Response) => {
 
+      console.log("Receive data: " + data);
 
-    ngOnDestroy() {
-    }
+      let listStations: Station[] = new Array();
 
-    ngAfterViewInit(): void {
-         /**
-         * Init map api [google.maps]
-         */
-        this.gapi.init.then((maps: any) => {
-            const loc = new maps.LatLng(46.0115418, 24.3322181);
- 
-            this.map = new maps.Map(this.mapElement.nativeElement, {
-                zoom: 13,
-                center: loc,
-                scrollwheel: false,
-                panControl: false,
-                mapTypeControl: false,
-                zoomControl: true,
-                streetViewControl: false,
-                scaleControl: true,
-                zoomControlOptions: {
-                    style: maps.ZoomControlStyle.LARGE,
-                    position: maps.ControlPosition.RIGHT_BOTTOM
-                }
-            });
- 
-            const input = this.inputElement.nativeElement;
-            const options = {
-                componentRestrictions: {country: 'ru'}
-            };
- 
-            const autocomplete = new maps.places.Autocomplete(input, options);
- 
-            autocomplete.addListener('place_changed', () => {
-                const place = autocomplete.getPlace();
-                const location = place.geometry.location;
- 
-                this.map.setZoom(13);
-                this.map.setCenter({
-                    lat: location.lat(),
-                    lng: location.lng()
-                });
-            });
+      let resultL = data.results.bindings;
+      // console.log("Receive data:" + resultL);
+
+      for (let entry of resultL) {
+        let uri = entry['sub']['value'];
+        if (this.containsInList(listStations, uri)) {
+          let index = this.getIndexOfArray(listStations, uri);
+          // console.log("FOUND.... " + index);
+
+          let oldS: Station = listStations[index];
+          listStations.splice(index);
+          // console.log(oldS.uri);
+          //  debugger;
+          //
+          let val: string = entry['prop']['value'];
+
+          if (val.indexOf("LAT") !== -1) {
+            oldS.lat = entry['obj']['value'];
+          }
+          else if (val.indexOf("LON") !== -1) {
+            oldS.long = entry['obj']['value'];
+          } else if (val.indexOf('Country') !== -1) {
+            oldS.fullName = entry['obj']['value'];
+          }
+
+          listStations.push(oldS);
+
+        } else {
+          let s: Station = new Station();
+          s.uri = uri;
+
+          let val: string = entry['prop']['value'];
+
+          if (val.indexOf("LAT") !== -1) {
+            s.lat = entry['obj']['value'];
+          } else if (val.indexOf("LON") !== -1) {
+            s.long = entry['obj']['value'];
+          } else if (val.indexOf('Country') !== -1) {
+            s.fullName = entry['obj']['value'];
+          }
+
+          listStations.push(s);
+        }
+      }
+
+      for (let entry of listStations) {
+        this.markers.push({
+          lat: parseFloat(entry.lat),
+          lng: parseFloat(entry.long),
+          // label: entry.fullName,
+          draggable: false
         });
+      }
+      console.log("------------ ", this.markers)
+      this.cdRef.detectChanges();
+    });
+
+  }
+
+  getIndexOfArray(list: Array, uri: string): any {
+    let index = 0;
+    for (let entry of list) {
+      if (entry.uri === uri) {
+        return index;
+      }
+      index++;
     }
+    return 0;
+
+  }
+
+  containsInList(list: Array, uri: string): boolean {
+    for (let entry of list) {
+      if (entry.uri === uri) {
+        return true;
+      }
+    }
+    return false;
+  }
+
+  ngOnDestroy() {
+  }
+
+  ngAfterViewInit(): void {
+    console.log("initialization");
+  }
+
+  // markers: marker[] = [
+  //   {
+  //     lat: 44.96518,
+  //     lng: 25.970816,
+  //     label: 'A',
+  //     draggable: true
+  //   },
+  //   {
+  //     lat: 44.4458851,
+  //     lng: 26.0727263,
+  //     label: 'B',
+  //     draggable: false
+  //   }
+  // ]
+}
+
+// just an interface for type safety.
+interface marker {
+  lat: number;
+  lng: number;
+  label?: string;
+  draggable: boolean;
+
 }
