@@ -45,11 +45,12 @@ export class StationsService {
   }
 
   findSourceDestination(source: string, destination: string): Observable<Response>{
+    console.log("######## " + source + " ##### " + destination);
     let query: string = "SELECT * WHERE { " +
-      "{?sub <http://www.w3.org/2001/vcard-rdf/3.0#STATION_ORIGIN> ?object .FILTER (contains(?object, '" + source + "' ))}"
+      "{?sub <http://www.w3.org/2001/vcard-rdf/3.0#STATION_ORIGIN> ?object .FILTER (contains(?object, '" + source.trim() + "' ))}"
       + " UNION " +
-      "{?sub <http://www.w3.org/2001/vcard-rdf/3.0#STATION_ORIGIN> ?object .FILTER (contains(?object, '" + destination + "' ))}" +
-      "}";
+      "{?sub <http://www.w3.org/2001/vcard-rdf/3.0#STATION_ORIGIN> ?object .FILTER (contains(?object, '" + destination.trim() + "' ))}" +
+      "} LIMIT 1000";
 
 
     let headers: HttpHeaders = new HttpHeaders({

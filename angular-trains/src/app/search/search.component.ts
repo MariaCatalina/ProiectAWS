@@ -27,6 +27,8 @@ export class SearchFilter implements OnInit {
 
   public clearBtnFunc() {
     this.messageService.sendMessage("clear");
+    this.source = "";
+    this.destination = "";
   }
 
   ngOnInit() {

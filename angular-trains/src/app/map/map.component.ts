@@ -23,32 +23,23 @@ export class TrainsGoogleMap implements OnInit {
   lng: number = 24.2705566;
 
   markers: marker[] = new Array();
-
-  lines = new Array();
-  //   lat: 44.96518,
-  //   lng: 25.970816
-  //
-  // },
-  //   {
-  //     lat: 44.4458851,
-  //     lng: 26.0727263
-  //   } ,
-  //   {
-  //     lat: 44.6458851,
-  //     lng: 26.0727263
-  //
-  //   }];
+  stationList: Station[] = new Array();
+  details = "detalii...";
 
   clickedMarker(label: string, index: number) {
-    console.log(`clicked the marker: ${label || index}`)
+    console.log(`clicked the marker: ` + index);
+
+    for (let i = 0; i < this.markers.length; i++) {
+      this.markers[i].isOpen = false;
+    }
+
+    this.markers[index].isOpen = true;
+    this.details = label;
+    this.cdRef.detectChanges();
+
   }
 
   mapClicked($event: MouseEvent) {
-    // this.markers.push({
-    //   lat: $event.coords.lat,
-    //   lng: $event.coords.lng,
-    //   draggable: true
-    // });
   }
 
   message: string;
@@ -57,6 +48,7 @@ export class TrainsGoogleMap implements OnInit {
   constructor(private stationsService: StationsService, private cdRef: ChangeDetectorRef, private messageService: MessageService, private gmapsApi: GoogleMapsAPIWrapper) {
     this.subscription = this.messageService.getMessage().subscribe(message => {
       this.message = message;
+      this.markers = [];
       console.log("message: " + message.text);
 
       if (message.text === "clear") {
@@ -79,11 +71,11 @@ export class TrainsGoogleMap implements OnInit {
 
   }
 
-
   findStations(source: string, destintion: string) {
-    this.stationsService.findSourceDestination(source, destintion).subscribe((data: Response) => {
+    this.markers = [];
+    this.stationsService.findSourceDestination(source.trim(), destintion.trim()).subscribe((data: Response) => {
       console.log("am gasit sursa: + " + data.results.bindings);
-      if (!isUndefined(data)) {
+      if (!isUndefined(data) && data.results.bindings != []) {
         debugger;
         let sourceURI = "";
         let destURI = "";
@@ -105,7 +97,7 @@ export class TrainsGoogleMap implements OnInit {
           }
         }
 
-        console.log("s: " + sourceURI , "D: " + destURI);
+        console.log("s: " + sourceURI, "D: " + destURI);
 
         this.stationsService.findTrain(sourceURI, destURI).subscribe(train => {
           for (let entry of train.results.bindings) {
@@ -135,6 +127,9 @@ export class TrainsGoogleMap implements OnInit {
     console.log("-> " + stations);
     let index = 0;
     for (let entry of stations) {
+      if (entry.indexOf(dest) !== -1) {
+        break;
+      }
       this.stationsService.findOneStation(entry.trim()).subscribe(data => {
         if (!isNullOrUndefined(data)) {
           let oldS: Station = new Station();
@@ -153,9 +148,11 @@ export class TrainsGoogleMap implements OnInit {
           this.markers.push({
             lat: parseFloat(oldS.lat),
             lng: parseFloat(oldS.long),
-            // label: entry.fullName,
+            label: oldS.fullName,
             draggable: false
           });
+
+          this.stationList.push(oldS);
         }
       });
     }
@@ -169,7 +166,7 @@ export class TrainsGoogleMap implements OnInit {
       let listStations: Station[] = new Array();
 
       let resultL = data.results.bindings;
-      // console.log("Receive data:" + resultL);
+      console.log("####### Receive data:" + resultL.length);
 
       for (let entry of resultL) {
         let uri = entry['sub']['value'];
@@ -178,7 +175,7 @@ export class TrainsGoogleMap implements OnInit {
           // console.log("FOUND.... " + index);
 
           let oldS: Station = listStations[index];
-          listStations.splice(index);
+          listStations.splice(index,1);
           // console.log(oldS.uri);
           //  debugger;
           //
@@ -217,11 +214,13 @@ export class TrainsGoogleMap implements OnInit {
         this.markers.push({
           lat: parseFloat(entry.lat),
           lng: parseFloat(entry.long),
-          // label: entry.fullName,
-          draggable: false
+          label: entry.fullName,
+          draggable: false,
+          isOpen: false
         });
+
       }
-      console.log("------------ ", this.markers)
+      console.log("------------ ", this.markers.length)
       this.cdRef.detectChanges();
     });
 
@@ -230,7 +229,7 @@ export class TrainsGoogleMap implements OnInit {
   getIndexOfArray(list: Array, uri: string): any {
     let index = 0;
     for (let entry of list) {
-      if (entry.uri === uri) {
+      if (entry.uri == uri) {
         return index;
       }
       index++;
@@ -249,6 +248,11 @@ export class TrainsGoogleMap implements OnInit {
   }
 
   ngOnDestroy() {
+  }
+
+  showDetails() {
+    console.log("click on marker");
+    // this.details = this.stationList[]
   }
 
   ngAfterViewInit(): void {
@@ -277,5 +281,6 @@ interface marker {
   lng: number;
   label?: string;
   draggable: boolean;
+  isOpen?: boolean;
 
 }
