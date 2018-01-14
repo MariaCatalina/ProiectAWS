@@ -4,8 +4,8 @@ import {Observable} from "rxjs/Rx"
 import {HttpClient, HttpHeaders} from '@angular/common/http';
 import {HttpParams} from "@angular/common/http";
 import {HttpParamsOptions} from "@angular/common/http/src/params";
-import {URLSearchParams, Response, Response} from "@angular/http";
 import {Station} from "./Station";
+import {RequestOptions} from "@angular/http";
 
 /**
  * Created by Cata on 1/13/2018.
@@ -20,22 +20,9 @@ export class StationsService {
   constructor(private http: HttpClient) {
   }
 
-  getAllStations(): Observable<Response> {
+  getAllStations(): Observable<any> {
     let query: string = "SELECT * WHERE { ?sub ?prop ?obj .FILTER (contains(?sub, 'Station')) } ";
-
-    let headers: HttpHeaders = new HttpHeaders({
-      'Content-type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/sparql-results+json'
-    });
-
-    let params = new HttpParams().set('query',query).set('output', 'json');
-
-    let options: HttpParamsOptions = {
-      headers: headers,
-      params: params
-    };
-
-    return this.http.get(SERVER_URL, options);
+    return this.sendCallToServer(query);
   }
 
 
@@ -44,8 +31,7 @@ export class StationsService {
 
   }
 
-  findSourceDestination(source: string, destination: string): Observable<Response>{
-    console.log("######## " + source + " ##### " + destination);
+  findSourceDestination(source: string, destination: string): Observable<any>{
     let query: string = "SELECT * WHERE { " +
       "{?sub <http://www.w3.org/2001/vcard-rdf/3.0#STATION_ORIGIN> ?object .FILTER (contains(?object, '" + source.trim() + "' ))}"
       + " UNION " +
@@ -53,57 +39,30 @@ export class StationsService {
       "} LIMIT 1000";
 
 
-    let headers: HttpHeaders = new HttpHeaders({
-      'Content-type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/sparql-results+json'
-    });
-
-    let params = new HttpParams().set('query',query).set('output', 'json');
-
-    let options: HttpParamsOptions = {
-      headers: headers,
-      params: params
-    };
-
-    return this.http.get(SERVER_URL, options);
+    return this.sendCallToServer(query);
   }
 
-  findTrain(source: string, dest: string): Observable<Response>{
+  findTrain(source: string, dest: string): Observable<any>{
     let query: string = "SELECT * WHERE { ?sub <http://www.w3.org/2001/vcard-rdf/3.0#TRAIN_STATIONS> ?obj" +
       " .FILTER (contains(?obj," + source + ")) " +
       " .FILTER (contains(?obj," +  dest + ")) " + "}";
 
-    let headers: HttpHeaders = new HttpHeaders({
-      'Content-type': 'application/x-www-form-urlencoded',
-      'Accept': 'application/sparql-results+json'
-    });
-
-    let params = new HttpParams().set('query',query).set('output', 'json');
-
-    let options: HttpParamsOptions = {
-      headers: headers,
-      params: params
-    };
-
-    return this.http.get(SERVER_URL, options);
+    return this.sendCallToServer(query);
   }
 
-  findOneStation(stationNumber: string){
+  findOneStation(stationNumber: string): Observable<any>{
     let query: string = "SELECT * WHERE { <http://opendata.cs.pub.ro/resource/Station_" + stationNumber +"> ?prop ?obj" + "}";
 
+    return this.sendCallToServer(query);
+  }
+
+  sendCallToServer(query: string){
     let headers: HttpHeaders = new HttpHeaders({
       'Content-type': 'application/x-www-form-urlencoded',
       'Accept': 'application/sparql-results+json'
     });
 
     let params = new HttpParams().set('query',query).set('output', 'json');
-
-    let options: HttpParamsOptions = {
-      headers: headers,
-      params: params
-    };
-
-    return this.http.get(SERVER_URL, options);
+    return this.http.get(SERVER_URL, {headers: headers, params: params});
   }
-
 }
